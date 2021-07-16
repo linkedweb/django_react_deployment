@@ -1,4 +1,4 @@
-# Django and React Deployment with Digitalocean
+# Django and React Deployment with DigitalOcean
 
 ### First create ssh key on your local machine
 
@@ -312,6 +312,10 @@ Next we get our production application onto GitHub, then from there we can clone
 Now we will clone our project on our digitalocean server (make sure you're in your pyapps directory):
 
     git clone https://github.com/your-github-name/your-repository.git
+
+Or if you want to clone a specific branch you can do:
+
+    git clone --single-branch --branch [branch-name] https://github.com/your-github-name/your-repository.git
 
 Then you will navigate into the project folder that was just created
 
