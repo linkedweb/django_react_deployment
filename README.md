@@ -268,6 +268,7 @@ Then add the following in your INSTALLED_APPS:
     INSTALLED_APPS = [
         ...
         'whitenoise.runserver_nostatic',
+        # 'django.contrib.staticfiles',
         ...
     ]
 
