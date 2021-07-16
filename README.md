@@ -16,11 +16,12 @@ Once you run this, enter the following for the name:
 
     id_rsa_do
 
--   The do part will signify this is for digitalocean.
+-   The **do** part will signify this is for digitalocean.
 -   By not having the defalt name, it will make it much easier to manage multiple ssh keys on your machine.
--   After this set you will set a password for the ssh key, make sure to remember this password.
--   It's quite common to use ssh keys with GitHub as well so that you also don't need to enter a password every time you push or pull to GitHub.
--   Once this command finished, you will have two files created:
+-   After this you will set a password for the ssh key, make sure to remember this password.
+-   It's quite common to use ssh keys with GitHub as well so that you also don't need to enter a password every time you push or pull to GitHub, so by not having the default **id_rsa** name it will make it much easier to manage having GitHub ssh keys as well on your machine.
+
+Once this command finished, you will have two files created:
 
     id_rsa_do
     id_rsa_do.pub
@@ -44,14 +45,14 @@ Run the following command on your local machine:
 
     cat ~/.ssh/id_rsa_do.pub
 
--   Then you want to copy the output
+-   Then you want to copy the output so you can use it later
 -   Back in digitalocean, you'll have authentication options
 -   Click **New SSH Key**, then paste in your ssh key you copied from **id_rsa_do.pub**, make sure you didn't copy from **id_rsa_do**
 -   Then the last thing to do is set the hostname, add backups if you want, and then you're done
 -   You can also later change the hostname in your server if you mess this up with: sudo hostnamectl set-hostname your-new-hostname
 -   You can also edit the droplet name easily if you mess this up as well
 
-Now that your server is ready, now we have to log into it
+Now that your server is ready, we have to log into it
 
 ### Log into your server
 
@@ -59,7 +60,7 @@ Copy your server's IP Address, open a terminal, and run the following:
 
     ssh root@SERVER_IP
 
-The first time you do this, your ssh key won't work and you'll have to run the following:
+If your local machine deny's you access, run the following:
 
     ssh-add ~/.ssh/id_rsa_do
 
@@ -79,9 +80,12 @@ Next you want to give this user root permissions, so run the following:
 
     usermod -aG sudo your-username
 
-Next you want to grab your ssh key, to do this do one of the following:
+Next you want to grab your ssh key, if you don't have it copied, then do one of the following:
 
--   In your local terminal run: cat ~/.ssh/id_rsa_do.pub
+-   Go in your local terminal and copy the output from running:
+
+    cat ~/.ssh/id_rsa_do.pub
+
 -   Or go into digitalocean, then settings, then security, and from there you'll see your ssh keys where you can click more, then edit to see the ssh key and copy it
 
 Once you've copied your ssh key, go back into your digitalocean server where you're logged in as the root user.
