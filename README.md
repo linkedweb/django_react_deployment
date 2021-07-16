@@ -199,8 +199,6 @@ Then from there we're done with the PostgreSQL setup and can quit out of it:
 First we want to create a folder to hold python apps have on the server and create a virtual environment.
 
     sudo apt install python3-venv
-    mkdir pyapps
-    cd pyapps
     python3 -m venv venv
     source venv/bin/activate
 
@@ -309,7 +307,7 @@ Next we get our production application onto GitHub, then from there we can clone
 
 ### Back To The Server
 
-Now we will clone our project on our digitalocean server (make sure you're in your pyapps directory):
+Now we will clone our project on our digitalocean server (make sure you're in your home directory):
 
     git clone https://github.com/your-github-name/your-repository.git
 
@@ -379,8 +377,8 @@ Then place the following inside of that file:
     [Service]
     User=[your-username]
     Group=www-data
-    WorkingDirectory=/home/[your-username]/pyapps/[your-github-project-folder]
-    ExecStart=/home/[your-username]/pyapps/venv/bin/gunicorn \
+    WorkingDirectory=/home/[your-username]/[your-github-project-folder]
+    ExecStart=/home/[your-username]/venv/bin/gunicorn \
             --access-logfile - \
             --workers 3 \
             --bind unix:/run/gunicorn.sock \
@@ -416,11 +414,11 @@ Then inside of there you want to add the following:
 
         location = /favicon.ico { access_log off; log_not_found off; }
         location /static/ {
-            root /home/[your-username]/pyapps/[your-github-project-folder];
+            root /home/[your-username]/[your-github-project-folder];
         }
         
         location /media/ {
-            root /home/[your-username]/pyapps/[your-github-project-folder];    
+            root /home/[your-username]/[your-github-project-folder];    
         }
 
         location / {
