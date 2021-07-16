@@ -102,6 +102,10 @@ From there you want to do the following:
 -   Then press **y** to save the changes
 -   Then press **enter** to exit the editor
 
+In this authorized_keys file you can add multiple ssh keys by just having them on separate lines.
+
+So if you have another machine you want to have access to your digitalocean server, you can just add in that ssh key in your digitalocean settings, add it into you authorized_keys, and then you're good to go.
+
 Now run **exit** in the terminal to exit the server session
 
 Then we want to log in with our newly created user:
