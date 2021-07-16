@@ -1,8 +1,8 @@
-# Django and React Deployment with Digitalocean Ubuntu Server
+# Django and React Deployment with Digitalocean
 
-## First create ssh key on your local machine
+### First create ssh key on your local machine
 
-### This is so that later you don't need a password to log into your server
+This is so that later you don't need a password to log into your server
 
 To generate an ssh key, first navigate into your .ssh folder in your home directory:
 
@@ -125,4 +125,454 @@ Then you want to reload the sshd service by running the following:
 
     sudo systemctl reload sshd
 
+### Firewall
 
+To view which apps have a firewall you can run:
+
+    sudo ufw app list
+
+You want to make sure you allow OpenSSH, so run the following
+
+    sudo ufw allow OpenSSH
+
+Then you can enable the firewall with:
+
+    sudo ufw enable
+
+Then to check the status you can run:
+
+    sudo ufw status
+
+### Software Setup
+
+Next we want to make sure we have the software we need on our server
+
+First update the packages on the system with the following:
+
+    sudo apt update
+    sudo apt upgrade
+
+After this install Python3, PostgreSQL, and NGINX by running the following:
+
+    sudo apt install python3-pip python3-dev libpq-dev postgresql postgresql-contrib nginx curl
+
+### Setup Database
+
+Next we want to setup our PostgreSQL database
+
+First we need to login with the following:
+
+    sudo -u postgres psql
+
+Next we want to create our database:
+
+    CREATE DATABASE database_name;
+
+Then we create a user:
+
+    CREATE USER your-user WITH PASSWORD '[YOUR PASSWORD]';
+
+Next we want to set a default encoding and transaction isolation scheme:
+
+    ALTER ROLE your-user SET client_encoding TO 'utf8';
+    ALTER ROLE your-user SET default_transaction_isolation TO 'read committed';
+    ALTER ROLE your-user SET timezone TO 'UTC';
+
+Then we want to give our user access to the database we made:
+
+    GRANT ALL PRIVILEGES ON DATABASE database_name TO your-user;
+
+Then from there we're done with the PostgreSQL setup and can quit out of it:
+
+    \q
+
+### Getting Project Onto Server
+
+First we want to create a folder to hold python apps have on the server and create a virtual environment.
+
+    sudo apt install python3-venv
+    mkdir pyapps
+    cd pyapps
+    python3 -m venv venv
+    source venv/bin/activate
+
+Now we want to have our project on our local machine ready for production and on a GitHub repository
+
+-   we want to have the pip dependencies of our project in a requirements.txt file to make it easy to instlal the depencendies on our server
+-   you can check the dependencies of your project with: pip freeze
+-   you can also bring in all those dependencies into your requirements.txt with: pip freeze > requirements.txt
+-   though you can also just grab the ones you want and place them in that file
+
+In your settings.py file, at the bottom add:
+
+    try:
+        from .local_settings import *
+    except ImportError:
+        pass
+
+Then in your django project folder, you can create a local_settings.py file where you can store important info
+
+This local_settings.py file I'd place into the .gitignore so it doesn't get pushed into the reporitory
+
+You can have settings in here you'll use when testing things in your local machine, and on your server you can later create this and place the appropriate production settings you want.
+
+Settings I place in the local_settings.py file are the following:
+
+-   SECRET_KEY
+-   ALLOWED_HOSTS
+-   DEBUG
+-   DATABASES
+-   EMAIL
+
+Then any Braintree settings, Stripe settings, PayPal settings, Google settings, Facebook settings I'd place in here:
+
+-   BT_ENVIRONMENT
+-   BT_MERCHANT_ID
+-   BT_PUBLIC_KEY
+-   BT_PRIVATE_KEY
+-   STRIPE_PUBLIC_KEY
+-   STRIPE_SECRET_KEY
+-   PAYPAL_CLIENT_ID
+-   PAYPAL_SECRET_ID
+-   SOCIAL_AUTH_GOOGLE_OAUTH2_KEY
+-   SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
+-   SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE
+-   SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA
+-   SOCIAL_AUTH_FACEBOOK_KEY
+-   SOCIAL_AUTH_FACEBOOK_SECRET
+-   SOCIAL_AUTH_FACEBOOK_SCOPE
+-   SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS
+
+So anything you want to keep secure you'd place inside of the local_settings.py file.
+
+### Whitenoise
+
+We also want to make sure we setup whitenoise in our local project, this will make it so that static files work properly on our server once we set **DEBUG** to **False**
+
+To setup whitenoise, in your project on your local machine run the following with your virtual environment activated:
+
+    pip install whitenoise
+
+Then make sure whitenoise is added to your requirements.txt
+
+Then add the following in your INSTALLED_APPS:
+
+    INSTALLED_APPS = [
+        ...
+        'whitenoise.runserver_nostatic',
+        ...
+    ]
+
+Then add the following in your MIDDLEWARE:
+
+    MIDDLEWARE = [
+        # 'django.middleware.security.SecurityMiddleware',
+        'whitenoise.middleware.WhiteNoiseMiddleware',
+        ...
+    ]
+
+Then add the following somewhere in your settings.py:
+
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+That's all there is to it, from there on your local machine (not on your server) you will collect your static files, though first we need to setup our frontend production build folder
+
+Make sure you have your apps folder structure ready for production, and your build folder ready to go.
+
+For the build folder you want to make sure that you go into your .env file and have:
+
+    REACT_APP_API_URL = '[YOUR_DOMAIN]'
+
+Or in the place of YOUR_DOMAIN you can also have your server's ip address, though for a real application definitely have your domain here
+
+Then you will build your project:
+
+    npm run build
+
+After this we will collect the static files to create our static folder again in our local machine (not on your server):
+
+    python manage.py collectstatic
+
+This will create a static folder which you push up into your server along with your project.
+
+Next we get our production application onto GitHub, then from there we can clone our project on our server.
+
+### Back To The Server
+
+Now we will clone our project on our digitalocean server (make sure you're in your pyapps directory):
+
+    git clone https://github.com/your-github-name/your-repository.git
+
+Then you will navigate into the project folder that was just created
+
+    cd github-project
+
+From there while in your virtual environment, install the pip dependencies:
+
+    pip install -r requirements.txt
+
+Then navigate into your django project folder and create a local_settings.py file:
+
+    cd django-project-folder
+    nano local_settings.py
+
+From there you will add the settings you need into this file.
+
+Next we want to migrate things to our database and create a superuser, so run the following in your project folder:
+
+    python manage.py makemigrations
+    python manage.py migrate
+    python manage.py createsuperuser
+
+### Gunicorn
+
+Next we need something to run our django app, for this we will use gunicorn.
+
+To install it run:
+
+    pip install gunicorn
+
+Next deactivate your virtual environment:
+
+    deactivate
+
+Then open the gunicorn.socket file:
+
+    sudo nano /etc/systemd/system/gunicorn.socket
+
+Then place the following inside of that file:
+
+    [Unit]
+    Description=gunicorn socket
+
+    [Socket]
+    ListenStream=/run/gunicorn.sock
+
+    [Install]
+    WantedBy=sockets.target
+
+Then open the gunicorn.service file:
+
+    sudo nano /etc/systemd/system/gunicorn.service
+
+Then place the following inside of that file:
+
+    [Unit]
+    Description=gunicorn daemon
+    Requires=gunicorn.socket
+    After=network.target
+
+    [Service]
+    User=[your-username]
+    Group=www-data
+    WorkingDirectory=/home/[your-username]/pyapps/[your-github-project-folder]
+    ExecStart=/home/[your-username]/pyapps/venv/bin/gunicorn \
+            --access-logfile - \
+            --workers 3 \
+            --bind unix:/run/gunicorn.sock \
+            [your-django-project-name].wsgi:application
+
+    [Install]
+    WantedBy=multi-user.target
+
+Next you want to start and enable the gunicorn socket:
+
+    sudo systemctl start gunicorn.socket
+    sudo systemctl enable gunicorn.socket
+
+You can check the status of this socket with the following:
+
+    sudo systemctl status gunicorn.socket
+
+You can also check the existence of gunicorn.sock with the following:
+
+    file /run/gunicorn.sock
+
+### NGINX
+
+First we want to create a project folder:
+
+    sudo nano /etc/nginx/sites-available/[your-project-folder-name]
+
+Then inside of there you want to add the following:
+
+    server {
+        listen 80;
+        server_name YOUR_DOMAIN;
+
+        location = /favicon.ico { access_log off; log_not_found off; }
+        location /static/ {
+            root /home/[your-username]/pyapps/[your-github-project-folder];
+        }
+        
+        location /media/ {
+            root /home/[your-username]/pyapps/[your-github-project-folder];    
+        }
+
+        location / {
+            include proxy_params;
+            proxy_pass http://unix:/run/gunicorn.sock;
+        }
+    }
+
+Then here **YOUR_DOMAIN** can also be your server ip address, though in a real production app I'd recommend having your domain here.
+
+Next we need to enable this file by linking to the sites-enabled directory:
+
+    sudo ln -s /etc/nginx/sites-available/[your-project-folder-name] /etc/nginx/sites-enabled
+
+Then we can test that everything is in order:
+
+    sudo nginx -t
+
+Then we can restart NGINX:
+
+    sudo systemctl restart nginx
+
+Next we want to have our firewall allow NGINX:
+
+    sudo ufw allow 'Nginx Full'
+
+Then we want to edit nginx.conf so we don't have problems with uploading images:
+
+    sudo nano /etc/nginx/nginx.conf
+
+Then add this into the http section:
+
+    client_max_body_size 20M;
+
+Next we want to restart NGINX:
+
+    sudo systemctl restart nginx
+
+### Domain
+
+To setup your domain you want to have:
+
+-   an A Record that points to your digitalocean server ip address
+-   a CNAME record that points www to your host (@)
+
+Then in your local_settings.py file on your server you want the following:
+
+    ALLOWED_HOSTS = ['your-domain.com', 'www.your-domain.com']
+
+You can also have your ip address in the allowed hosts, though in a real production app I'd suggest just having the domain.
+
+Then we want to go back into our NGINX project folder we created and add in the domain:
+
+    sudo nano /etc/nginx/sites-available/[your-project-folder-name]
+
+Then you can add in the domain:
+
+    server {
+        ...
+        server_name your-domain.com www.your-domain.com;
+        ...
+    }
+
+Next we will restart NGINX and Gunicorn:
+
+    sudo systemctl restart nginx
+    sudo systemctl restart gunicorn
+
+Now our app is hosted and ready to go, however we will need an SSL certificate.
+
+### SSL Certificate Setup
+
+Run the following:
+    
+    cd ~/
+    git clone https://github.com/letsencrypt/letsencrypt
+    cd letsencrypt
+    ./letsencrypt-auto --help
+    sudo service nginx stop
+    ./letsencrypt-auto certonly --standalone -d your-domain.com
+    ./letsencrypt-auto certonly --standalone -d www.your-domain.com
+
+The reason for having an ssl certificate for www.your-domain.com as well even though we made a CNAME record is that on some devices when someone goes to www.your-domain.com it won't re-route them to your-domain.com like you'd expect. Most devices will, but I found some don't so we can add this ssl certificate to ensure that we don't have issues.
+
+Next we want to go back and once again edit our NGINX project folder:
+
+    sudo nano /etc/nginx/sites-available/[your-project-folder-name]
+
+Then we want the following:
+
+    server {
+        listen 443 ssl;
+
+        server_name your-domain.com;
+        ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+
+        ...
+    }
+
+    server {
+        listen 443 ssl;
+
+        server_name www.your-domain.com;
+        ssl_certificate /etc/letsencrypt/live/www.your-domain.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/www.your-domain.com/privkey.pem;
+
+        ...
+    }
+
+    server {
+        listen 80;
+        server_name your-domain.com www.your-domain.com;
+        return 301 https://$host$request_uri;
+    }
+
+Then run:
+
+    sudo systemctl restart nginx
+
+From there you're good to go and have SSL certificates setup...well sort of...
+
+You will have an SSL certificate, but it will expire after 90 days and you will have to renew it.
+
+So when it's almost time to renew the SSL certificate you'd run the following:
+
+    sudo service nginx stop
+    sudo certbot renew
+    sudo systemctl restart nginx
+
+Then your SSL certificate would get renewed.
+
+However, renewing these SSL certificates every 90 days can be annoying, and if you have multiple servers where you host websites, this can be even more annoying.
+
+Thankfully we can have our server automate this process for us so we don't have to worry about renewing these SSL certificates manually every 90 days.
+
+### Crontabs
+
+We're going to setup a crontab in order to automatically renew these SSL certificates for us
+
+We want to setup a crontab that will run as root, so to create a crontab you will run the following:
+
+    sudo crontab -e
+
+Make sure to do this with sudo, if you don't it will make a crontab for your user and not the root user
+
+Then in that file at the bottom, add the following:
+
+    SHELL=/bin/bash
+    PATH=/sbin:/bin:/usr/sbin:/usr/local/bin:/usr/bin:/usr/sbin/nginx:/usr/bin/certbot:/bin/systemctl
+    0 6 * * 0 service nginx stop && certbot renew -n -q && systemctl restart nginx
+
+What this will do is every Sunday at 6:00am, it will try to renew your SSL certificates
+
+You can also adjust this so it runs less frequently, you can go to [Crontab Guru](https://crontab.guru/) to see how this works
+
+Then also note the time these things renew will be the time on your server
+
+You can check the current time of your server with the following:
+
+    timedatectl
+
+This will eliminate confusion potentially if you're testing a crontab as the server time might be different that your current time.
+
+Then once you make your changes to your crontab, run the following:
+
+    sudo service cron restart
+
+And that's it, not you have fully deployment your Django and React application, have an SSL certificate, and don't have to worry about manually renewing it!
