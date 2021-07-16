@@ -275,6 +275,7 @@ Then add the following in your INSTALLED_APPS:
 Then add the following in your MIDDLEWARE:
 
     MIDDLEWARE = [
+        ...
         # 'django.middleware.security.SecurityMiddleware',
         'whitenoise.middleware.WhiteNoiseMiddleware',
         ...
