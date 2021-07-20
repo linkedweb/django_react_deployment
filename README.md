@@ -501,6 +501,7 @@ Run the following:
 The reason for having an ssl certificate for www.your-domain.com as well even though we made a CNAME record is that on some devices when someone goes to www.your-domain.com it won't re-route them to your-domain.com like you'd expect. Most devices will, but I found some don't so we can add this ssl certificate to ensure that we don't have issues.
 
 Then run:
+
     sudo fuser -k 80/tcp
     sudo systemctl restart nginx
 
