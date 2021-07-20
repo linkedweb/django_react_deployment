@@ -494,12 +494,9 @@ Now our app is hosted and ready to go, however we will need an SSL certificate.
 Run the following:
     
     cd ~/
-    git clone https://github.com/letsencrypt/letsencrypt
-    cd letsencrypt
-    ./letsencrypt-auto --help
+    sudo apt install certbot python3-certbot-nginx
     sudo service nginx stop
-    ./letsencrypt-auto certonly --standalone -d your-domain.com
-    ./letsencrypt-auto certonly --standalone -d www.your-domain.com
+    sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 
 The reason for having an ssl certificate for www.your-domain.com as well even though we made a CNAME record is that on some devices when someone goes to www.your-domain.com it won't re-route them to your-domain.com like you'd expect. Most devices will, but I found some don't so we can add this ssl certificate to ensure that we don't have issues.
 
