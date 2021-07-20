@@ -500,40 +500,8 @@ Run the following:
 
 The reason for having an ssl certificate for www.your-domain.com as well even though we made a CNAME record is that on some devices when someone goes to www.your-domain.com it won't re-route them to your-domain.com like you'd expect. Most devices will, but I found some don't so we can add this ssl certificate to ensure that we don't have issues.
 
-Next we want to go back and once again edit our NGINX project folder:
-
-    sudo nano /etc/nginx/sites-available/[your-project-folder-name]
-
-Then we want the following:
-
-    server {
-        listen 443 ssl;
-
-        server_name your-domain.com;
-        ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-
-        ...
-    }
-
-    server {
-        listen 443 ssl;
-
-        server_name www.your-domain.com;
-        ssl_certificate /etc/letsencrypt/live/www.your-domain.com/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/www.your-domain.com/privkey.pem;
-
-        ...
-    }
-
-    server {
-        listen 80;
-        server_name your-domain.com www.your-domain.com;
-        return 301 https://$host$request_uri;
-    }
-
 Then run:
-
+    sudo fuser -k 80/tcp
     sudo systemctl restart nginx
 
 From there you're good to go and have SSL certificates setup...well sort of...
