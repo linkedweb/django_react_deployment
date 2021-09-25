@@ -194,6 +194,35 @@ Then from there we're done with the PostgreSQL setup and can quit out of it:
 
     \q
 
+### Setting Up GitHub SSH Keys
+
+GitHub no longer supports cloning a project, and making pull requests using a username and password.
+
+So we need to setup ssh keys on our digitalocean server in order to address this.
+
+-   First navigate into your /home/your-user directory
+-   Then if you do: ls -al
+-   You may notice the owner of the .ssh file is root, so we need to change this with: sudo chown your-user:your-user .ssh
+-   Now you will be able to generate an ssh key: ssh-keygen -t ed25519
+-   Have it stored in: /home/your-user/.ssh/id_ed25519
+-   Navigate into: /hom/your-user/.ssh
+-   Run: cat id_ed25519.pub
+-   Copy the output
+-   Go to GitHub > Settings > SSH and GPG keys > New SSH key, then paste in your key
+-   Back in digital ocean, navigate to: /home/your-user/.ssh
+-   Run: nano config
+
+In there, place the following:
+
+    Host github.com
+        HostName github.com
+        User git
+        IdentityFile ~/.ssh/id_ed25519
+
+Then you'll need to add the identity file:
+
+-   ssh-agent bash -c 'ssh-add ~/.ssh/id_ed25519;'
+
 ### Getting Project Onto Server
 
 First we want to create a folder to hold python apps have on the server and create a virtual environment.
@@ -310,10 +339,12 @@ Next we get our production application onto GitHub, then from there we can clone
 Now we will clone our project on our digitalocean server (make sure you're in your home directory):
 
     git clone https://github.com/your-github-name/your-repository.git
+    If you setup a .ssh/config, do: git clone git@github.com:/your-github-name/your-repository.git
 
 Or if you want to clone a specific branch you can do:
 
     git clone --single-branch --branch [branch-name] https://github.com/your-github-name/your-repository.git
+    If you setup a .ssh/config, do: git clone --single-branch --branch [branch-name] git@github.com:/your-github-name/your-repository.git
 
 Then you will navigate into the project folder that was just created
 
@@ -416,9 +447,9 @@ Then inside of there you want to add the following:
         location /static/ {
             root /home/[your-username]/[your-github-project-folder];
         }
-        
+
         location /media/ {
-            root /home/[your-username]/[your-github-project-folder];    
+            root /home/[your-username]/[your-github-project-folder];
         }
 
         location / {
@@ -492,7 +523,7 @@ Now our app is hosted and ready to go, however we will need an SSL certificate.
 ### SSL Certificate Setup
 
 Run the following:
-    
+
     cd ~/
     sudo apt install certbot python3-certbot-nginx
     sudo service nginx stop
